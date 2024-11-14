@@ -127,13 +127,10 @@ resource "kubectl_manifest" "karpenter_provisioner_graviton" {
           values: ["4"]
         - key: kubernetes.io/arch
           operator: In
-          values: ["amd64"]
+          values: ["arm64"]
         - key: "karpenter.k8s.aws/instance-size"
           operator: In
-          values: ["medium", "small", "micro"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["t4g", "m8g"]
+          values: ["medium", "large"]
       limits:
         resources:
           cpu: 1000
@@ -201,14 +198,11 @@ resource "kubectl_manifest" "karpenter_provisioner_x86" {
           operator: Gt
           values: ["4"]
         - key: kubernetes.io/arch
-          operator: NotIn
+          operator: In
           values: ["amd64"]
         - key: "karpenter.k8s.aws/instance-size"
           operator: In
-          values: ["medium", "small", "micro"]
-        - key: "karpenter.k8s.aws/instance-family"
-          operator: In
-          values: ["t3", "m5"]
+          values: ["nano", "micro", "small", "medium"]
       limits:
         resources:
           cpu: 1000
@@ -227,7 +221,7 @@ resource "kubectl_manifest" "karpenter_provisioner_x86" {
   ]
 }
 
-################
+###############
 # resource "kubectl_manifest" "karpenter_node_template_default" {
 #   wait = true # We need to wait for destruction and finalizer
 #   yaml_body = <<-YAML

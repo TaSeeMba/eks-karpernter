@@ -10,6 +10,12 @@ variable "cluster_version" {
   default = "1.28"
 }
 
+variable "kubernetes_access_role" {
+  description = "Role for accessing kubernetes"
+  type = string
+  default = ""
+}
+
 variable "vpc_id" {
   description = "ID of the VPC where the cluster security group will be provisioned"
   type        = string
@@ -18,6 +24,12 @@ variable "subnets_ids" {
   description = "A list of subnet IDs where the nodes/node groups will be provisioned"
   type        = list(string)
 }
+
+variable "public_subnets_ids" {
+  description = "A list of subnet IDs where the nodes/node groups will be provisioned"
+  type        = list(string)
+}
+
 
 variable "node_instance_types" {
   description = "List of instance types for the node pool"
