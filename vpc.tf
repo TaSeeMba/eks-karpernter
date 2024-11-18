@@ -27,6 +27,7 @@ resource "aws_subnet" "private-af-south-1a" {
     "Name"                                      = "private-af-south-1a"
     "kubernetes.io/role/internal-elb"           = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "karpenter.sh/discovery" = var.cluster_name
   }
 }
 
@@ -39,6 +40,7 @@ resource "aws_subnet" "private-af-south-1b" {
     "Name"                                      = "private-af-south-1b"
     "kubernetes.io/role/internal-elb"           = "1"
     "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+    "karpenter.sh/discovery" = var.cluster_name
   }
 }
 

@@ -1,11 +1,12 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"
+  version = "~> 20.29"
 
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
   cluster_endpoint_public_access  = true
+  enable_cluster_creator_admin_permissions = true
 
   cluster_addons = {
     coredns = {
@@ -40,9 +41,10 @@ module "eks" {
         # @FIXME need to use container image from our ECR but there is no config option for it here
       })
     }
-    
-    eks-pod-identity-agent = {}
     kube-proxy             = {}
+    eks-pod-identity-agent = {
+      most_recent = true
+    }
     vpc-cni                = {
       configuration_values = jsonencode({
         env = {
@@ -60,6 +62,8 @@ module "eks" {
       aws_subnet.public-af-south-1a.id,
       aws_subnet.public-af-south-1b.id
   ]
+
+  # enable_irsa = false
   # control_plane_subnet_ids = var.public_subnets_ids
 # EKS Managed Node Group(s)
   # eks_managed_node_group_defaults = {
@@ -98,7 +102,11 @@ module "eks" {
 
   # Cluster access entry
   # To add the current caller identity as an administrator
-  enable_cluster_creator_admin_permissions = true
+
+  # iam_role_additional_policies = {
+  #   AmazonSSMManagedInstanceCore             = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+  #   AmazonSSMManagedEC2InstanceDefaultPolicy = "arn:aws:iam::aws:policy/AmazonSSMManagedEC2InstanceDefaultPolicy"
+  # }
 
   # access_entries = {
   #   # One access entry with a policy associated
@@ -121,7 +129,8 @@ module "eks" {
   fargate_profiles = {
     karpenter = {
       selectors = [
-        { namespace = "karpenter" }
+        { namespace = "karpenter" 
+        }
       ]
       subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
     }

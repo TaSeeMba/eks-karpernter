@@ -25,7 +25,7 @@ provider "registry.terraform.io/alekc/kubectl" {
 
 provider "registry.terraform.io/hashicorp/aws" {
   version     = "5.75.1"
-  constraints = ">= 4.33.0, >= 4.57.0, >= 5.75.0, ~> 5.75.0"
+  constraints = ">= 4.33.0, >= 5.75.0, ~> 5.75.0"
   hashes = [
     "h1:uz55I4t3Pqy3p+82NZ35mkUA9mZ5yu4pS6beZMI8wpA=",
     "zh:1075825e7311a8d2d233fd453a173910e891b0320e8a7698af44d1f90b02621d",
@@ -67,7 +67,8 @@ provider "registry.terraform.io/hashicorp/cloudinit" {
 }
 
 provider "registry.terraform.io/hashicorp/helm" {
-  version = "2.16.1"
+  version     = "2.16.1"
+  constraints = ">= 2.4.1"
   hashes = [
     "h1:3VdXbh+m09VEAdSguT7Ea2MMnOVPZBYx4sUqvo6NPxo=",
     "zh:0003f6719a32aee9afaeeb001687fc0cfc8c2d5f54861298cf1dc5711f3b4e65",
