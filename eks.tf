@@ -9,59 +9,52 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
 
   cluster_addons = {
-    coredns = {
-      # resolve_conflicts_on_create = "PRESERVE"
-      # resolve_conflicts_on_update = "PRESERVE"
-      configuration_values = jsonencode({
-        computeType = "Fargate"
-        # Ensure that the we fully utilize the minimum amount of resources that are supplied by
-        # Fargate https://docs.aws.amazon.com/eks/latest/userguide/fargate-pod-configuration.html
-        # Fargate adds 256 MB to each pod's memory reservation for the required Kubernetes
-        # components (kubelet, kube-proxy, and containerd). Fargate rounds up to the following
-        # compute configuration that most closely matches the sum of vCPU and memory requests in
-        # order to ensure pods always have the resources that they need to run.
-        resources = {
-          limits = {
-            cpu = "0.25"
-            # We are targetting the smallest Task size of 512Mb, so we subtract 256Mb from the
-            # request/limit to ensure we can fit within that task
-            memory = "256M"
-          }
-          requests = {
-            cpu = "0.25"
-            # We are targetting the smallest Task size of 512Mb, so we subtract 256Mb from the
-            # request/limit to ensure we can fit within that task
-            memory = "256M"
-          }
-        }
-        podAnnotations = {
-          cluster_version = "${var.cluster_version}" # Do not override, use the default defined in variables.tf
-        }
-        # corefile = {} # @FIXME add lameduck 30 sec
-        # @FIXME need to use container image from our ECR but there is no config option for it here
-      })
-    }
+    coredns                = {}
+    eks-pod-identity-agent = {}
     kube-proxy             = {}
-    eks-pod-identity-agent = {
-      most_recent = true
-    }
-    vpc-cni                = {
-      configuration_values = jsonencode({
-        env = {
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
-          ENABLE_PREFIX_DELEGATION = "true"
-          WARM_PREFIX_TARGET       = "1"
-        }
-      })
+    vpc-cni                = {}
+  }
+
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnets
+  control_plane_subnet_ids = module.vpc.intra_subnets
+
+  # vpc_id                   = module.vpc.id
+  # subnet_ids               = [ aws_subnet.private-af-south-1a.id,
+  #     aws_subnet.private-af-south-1b.id, aws_subnet.public-af-south-1a.id,
+  #     aws_subnet.public-af-south-1b.id
+  # ]
+
+  # control_plane_subnet_ids = [ aws_subnet.public-af-south-1a.id,
+  #     aws_subnet.public-af-south-1b.id]
+
+  eks_managed_node_groups = {
+    karpenter = {
+      ami_type       = "AL2023_x86_64_STANDARD"
+      instance_types = ["m5.large"]
+
+      min_size     = 2
+      max_size     = 3
+      desired_size = 2
+
+      taints = {
+        # This Taint aims to keep just EKS Addons and Karpenter running on this MNG
+        # The pods that do not tolerate this taint should run on nodes created by Karpenter
+        addons = {
+          key    = "CriticalAddonsOnly"
+          value  = "true"
+          effect = "NO_SCHEDULE"
+        },
+      }
     }
   }
 
-  vpc_id                   = aws_vpc.main.id
-  subnet_ids               = [ aws_subnet.private-af-south-1a.id,
-      aws_subnet.private-af-south-1b.id,
-      aws_subnet.public-af-south-1a.id,
-      aws_subnet.public-af-south-1b.id
-  ]
+  node_security_group_tags = merge(var.tags, {
+    # NOTE - if creating multiple security groups with this module, only tag the
+    # security group that Karpenter should utilize with the following tag
+    # (i.e. - at most, only one security group should have this tag in your account)
+    "karpenter.sh/discovery" = var.cluster_name
+  })
 
   # enable_irsa = false
   # control_plane_subnet_ids = var.public_subnets_ids
@@ -126,25 +119,25 @@ module "eks" {
   #   }
   # }
 
-  fargate_profiles = {
-    karpenter = {
-      selectors = [
-        { namespace = "karpenter" 
-        }
-      ]
-      subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
-    }
-    coredns = {
-      selectors = [
-        { namespace = "kube-system"
-          labels = {
-            "eks.amazonaws.com/component" = "coredns"
-          }
-        }
-      ]
-      subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
-    }
-  }
+  # fargate_profiles = {
+  #   karpenter = {
+  #     selectors = [
+  #       { namespace = "karpenter" 
+  #       }
+  #     ]
+  #     subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
+  #   }
+  #   coredns = {
+  #     selectors = [
+  #       { namespace = "kube-system"
+  #         labels = {
+  #           "eks.amazonaws.com/component" = "coredns"
+  #         }
+  #       }
+  #     ]
+  #     subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
+  #   }
+  # }
 
   tags = {
     Environment = "dev"
