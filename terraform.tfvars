@@ -1,6 +1,6 @@
-cluster_name = "eks2411"
+cluster_name = "eks2411eve"
 cluster_version = "1.31"
-region = "af-south-1"
+region = "eu-west-1"
 
 kubernetes_access_role = "arn:aws:iam::509399612661:role/bmt-admin-role"
 

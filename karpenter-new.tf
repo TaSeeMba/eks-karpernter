@@ -3,6 +3,12 @@ module "karpenter" {
 
   cluster_name = module.eks.cluster_name
 
+  create = true
+  enable_irsa = true
+
+#   iam_role_name = "tasimba"
+  irsa_oidc_provider_arn = module.eks.oidc_provider_arn
+
   # Attach additional IAM policies to the Karpenter node IAM role
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -55,20 +61,15 @@ resource "helm_release" "karpenter" {
   }
 
   set {
-    name  = "serviceAccount.name"
-    value = module.karpenter.service_account
-  }
-
-  set {
     name  = "logLevel"
     value = "debug"
   }
 
-#   set {
-#     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-#     # value = module.karpenter.node_iam_role_arn
-#     value = module.karpenter.instance_profile_arn
-#   }
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    # value = module.karpenter.node_iam_role_arn
+    value = module.karpenter.iam_role_arn
+  }
 
   set {
     name  = "settings.interruptionQueue"

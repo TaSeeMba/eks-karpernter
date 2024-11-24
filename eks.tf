@@ -8,6 +8,8 @@ module "eks" {
   cluster_endpoint_public_access  = true
   enable_cluster_creator_admin_permissions = true
 
+  enable_irsa = true
+
   cluster_addons = {
     coredns = {
       # resolve_conflicts_on_create = "PRESERVE"
@@ -57,10 +59,10 @@ module "eks" {
   }
 
   vpc_id                   = aws_vpc.main.id
-  subnet_ids               = [ aws_subnet.private-af-south-1a.id,
-      aws_subnet.private-af-south-1b.id,
-      aws_subnet.public-af-south-1a.id,
-      aws_subnet.public-af-south-1b.id
+  subnet_ids               = [ aws_subnet.private-eu-west-1a.id,
+      aws_subnet.private-eu-west-1b.id,
+      aws_subnet.public-eu-west-1a.id,
+      aws_subnet.public-eu-west-1b.id
   ]
 
   # enable_irsa = false
@@ -132,7 +134,7 @@ module "eks" {
         { namespace = "karpenter" 
         }
       ]
-      subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
+      subnet_ids = [aws_subnet.private-eu-west-1a.id, aws_subnet.private-eu-west-1b.id]
     }
     coredns = {
       selectors = [
@@ -142,7 +144,7 @@ module "eks" {
           }
         }
       ]
-      subnet_ids = [aws_subnet.private-af-south-1a.id, aws_subnet.private-af-south-1b.id]
+      subnet_ids = [aws_subnet.private-eu-west-1a.id, aws_subnet.private-eu-west-1b.id]
     }
   }
 
