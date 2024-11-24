@@ -1,4 +1,4 @@
-cluster_name = "eks11"
+cluster_name = "eks2411"
 cluster_version = "1.31"
 region = "af-south-1"
 
