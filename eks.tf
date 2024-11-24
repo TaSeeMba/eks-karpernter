@@ -1,3 +1,4 @@
+# Create EKS cluster fron the latest available module as of 24/11/2024
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.29"
@@ -5,15 +6,16 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  cluster_endpoint_public_access  = true
+  # add cluster creator to admins to be able to administer cluster view AWS console and CLI
   enable_cluster_creator_admin_permissions = true
 
+  # this setting is required to allow Karpenter pods to startup using PodIdentity auth
   enable_irsa = true
 
   cluster_addons = {
     coredns = {
-      # resolve_conflicts_on_create = "PRESERVE"
-      # resolve_conflicts_on_update = "PRESERVE"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       configuration_values = jsonencode({
         computeType = "Fargate"
         # Ensure that the we fully utilize the minimum amount of resources that are supplied by
@@ -65,69 +67,6 @@ module "eks" {
       aws_subnet.public-eu-west-1b.id
   ]
 
-  # enable_irsa = false
-  # control_plane_subnet_ids = var.public_subnets_ids
-# EKS Managed Node Group(s)
-  # eks_managed_node_group_defaults = {
-  #   instance_types = ["t3.small"]
-  # }
-  # eks_managed_node_groups = {
-  #   eks_nodes = {
-  #     instance_types = ["t3.small"]
-  #     min_size     = 1
-  #     max_size     = 3
-  #     desired_size = 2
-  #   }
-  # }
-
-  # eks_managed_node_groups = {
-  #   example = {
-  #     instance_types = var.node_instance_types
-
-  #     # Exposes all EFA interfaces on the launch template created by the node group(s)
-  #     # This would expose all 32 EFA interfaces for the p5.48xlarge instance type
-  #     enable_efa_support = true
-
-  #     pre_bootstrap_user_data = <<-EOT
-  #       # Mount NVME instance store volumes since they are typically
-  #       # available on instance types that support EFA
-  #       setup-local-disks raid0
-  #     EOT
-
-  #     # EFA should only be enabled when connecting 2 or more nodes
-  #     # Do not use EFA on a single node workload
-  #     min_size     = 1
-  #     max_size     = 3
-  #     desired_size = 1
-  #   }
-  # }
-
-  # Cluster access entry
-  # To add the current caller identity as an administrator
-
-  # iam_role_additional_policies = {
-  #   AmazonSSMManagedInstanceCore             = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
-  #   AmazonSSMManagedEC2InstanceDefaultPolicy = "arn:aws:iam::aws:policy/AmazonSSMManagedEC2InstanceDefaultPolicy"
-  # }
-
-  # access_entries = {
-  #   # One access entry with a policy associated
-  #   admin = {
-  #     kubernetes_groups = ["nodes", "node-proxier"]
-  #     principal_arn     = "arn:aws:iam::509399612661:user/terraform"
-
-  #     policy_associations = {
-  #       all = {
-  #         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
-  #         access_scope = {
-  #           namespaces = []
-  #           type       = "cluster"
-  #         }
-  #       }
-  #     }
-  #   }
-  # }
-
   fargate_profiles = {
     karpenter = {
       selectors = [
@@ -148,16 +87,13 @@ module "eks" {
     }
   }
 
-  tags = {
-    Environment = "dev"
-    Terraform   = "true"
-    "karpenter.sh/discovery" = var.cluster_name 
+  # add this tag to for karpenter NodeClass required field idesecurityGroupSelectorTerms. See: https://karpenter.sh/v1.0/concepts/nodeclasses/#specsecuritygroupselectorterms
+  cluster_security_group_tags = {
+    "karpenter.sh/discovery" = var.cluster_name
   }
-}
 
-# resource "null_resource" "update_kubeconfig" {
-#   provisioner "local-exec" {
-#     command = "aws eks --region ${var.region} update-kubeconfig --name ${var.cluster_name}"
-#   }
-#   depends_on = [module.eks]
-# }
+  tags = merge(
+    { Name = var.cluster_name},
+    var.tags
+  )
+}

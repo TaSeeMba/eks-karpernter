@@ -1,3 +1,4 @@
+# Create a workload on gravition infra. Identify the graviton NodePool by tolerating this pod to run on the tainted NodePool.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

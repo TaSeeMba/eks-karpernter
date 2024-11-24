@@ -13,4 +13,5 @@ karpenter_version = "1.0.8"
 tags = {
   "ProjectName"        = "EKS-DEMO"
   "Owner"              = "Tasimba Chirindo"
+  "Terraform"          = "true"
 }
