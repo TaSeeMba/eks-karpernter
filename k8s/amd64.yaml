@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: inflate-arm64
+  name: inflate-amd64
 spec:
   replicas: 1
   selector:
@@ -18,7 +18,7 @@ spec:
         runAsGroup: 3000
         fsGroup: 2000
       tolerations:
-      - key: "graviton"
+      - key: "x86"
         operator: "Exists"
         effect: "NoSchedule"
       containers:

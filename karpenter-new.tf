@@ -5,6 +5,7 @@ module "karpenter" {
 
   create = true
   enable_irsa = true
+  create_instance_profile = true
 
 #   iam_role_name = "tasimba"
   irsa_oidc_provider_arn = module.eks.oidc_provider_arn
@@ -77,3 +78,120 @@ resource "helm_release" "karpenter" {
   }
 }
 
+resource "kubectl_manifest" "karpenter_nodepool_x86" {
+  wait = true # We need to wait for destruction and finalizer
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: x86
+    spec:
+      template:
+        spec:
+          requirements:
+            - key: kubernetes.io/arch
+              operator: In
+              values: ["amd64"]
+            - key: kubernetes.io/os
+              operator: In
+              values: ["linux"]
+            - key: karpenter.sh/capacity-type
+              operator: In
+              values: ["on-demand"]
+            - key: karpenter.k8s.aws/instance-category
+              operator: In
+              values: ["c", "m", "r"]
+            - key: karpenter.k8s.aws/instance-generation
+              operator: Gt
+              values: ["2"]
+          taints:
+            - effect: NoSchedule
+              key: x86
+          nodeClassRef:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+            name: karpenter
+          expireAfter: 720h # 30 * 24h = 720h
+      limits:
+        cpu: 1000
+      disruption:
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 1m  
+  YAML
+
+  depends_on = [
+    helm_release.karpenter
+  ]
+}
+
+resource "kubectl_manifest" "karpenter_nodepool_graviton" {
+  wait = true # We need to wait for destruction and finalizer
+  yaml_body = <<-YAML
+    apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
+      name: graviton
+    spec:
+      template:
+        spec:
+          requirements:
+            - key: kubernetes.io/arch
+              operator: In
+              values: ["arm64"]
+            - key: kubernetes.io/os
+              operator: In
+              values: ["linux"]
+            - key: karpenter.sh/capacity-type
+              operator: In
+              values: ["on-demand"]
+            - key: karpenter.k8s.aws/instance-category
+              operator: In
+              values: ["c", "m", "r"]
+            - key: karpenter.k8s.aws/instance-generation
+              operator: Gt
+              values: ["2"]
+          taints:
+            - effect: NoSchedule
+              key: graviton
+          nodeClassRef:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+            name: karpenter
+          expireAfter: 720h # 30 * 24h = 720h
+      limits:
+        cpu: 1000
+      disruption:
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 1m  
+  YAML
+
+  depends_on = [
+    helm_release.karpenter
+  ]
+}
+
+
+resource "kubectl_manifest" "karpenter_nodeclass" {
+  wait = true # We need to wait for destruction and finalizer
+  yaml_body = <<-YAML
+    apiVersion: karpenter.k8s.aws/v1
+    kind: EC2NodeClass
+    metadata:
+      name: karpenter
+    spec:
+      amiFamily: AL2
+      instanceProfile: "${module.karpenter.instance_profile_name}" 
+      subnetSelectorTerms:
+        - tags:
+            karpenter.sh/discovery: "${var.cluster_name}" 
+      securityGroupSelectorTerms:
+        - tags:
+            karpenter.sh/discovery: "${var.cluster_name}"
+      amiSelectorTerms:
+        - alias: al2@latest
+  YAML
+
+  depends_on = [
+    helm_release.karpenter
+  ]
+}
