@@ -8,12 +8,33 @@ module "karpenter" {
   create_pod_identity_association = true
 
   create_access_entry = true
-  create_instance_profile = true
-  # create_iam_role = true
 
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    Additional = "${aws_iam_policy.additional.arn}"
   }
+  
+  create_instance_profile = true
+  # create_iam_role = true
+}
+
+data "aws_iam_policy_document" "additional" {
+  statement {
+    sid = "AdditionalPolicies"
+    actions = [
+      "ec2:DescribeImages",
+      "iam:GetInstanceProfile",
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "additional" {
+  name   = "KarpenterAdditionalPolicies"
+  path   = "/"
+  policy = data.aws_iam_policy_document.additional.json
 }
 
 provider "aws" {
