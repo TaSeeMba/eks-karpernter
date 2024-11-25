@@ -18,7 +18,7 @@ The solution presented in this repo runs the Karpenter controller on AWS Fargate
 
 To simplify the deployment and testing process (see #Gotchas section), I have created a vpc with the solution. However, the solution can be easily customised to deploy into an existing vpc by using the commented out terraform input variables. 
 
-This solution first provisions a VPC and then an EKS cluster.  Karpenter and its dependencies are then installed next. Karpenter CRDs are installed separately. After Karpenter is installed, we create a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) for the x86 and graviton cluster nodepools. We then apply taints on the nodepools. To select which pods can be scheduled on the either nodepool, we apply tolerations on those pods to match the keys on the node taints. 
+This solution first provisions a VPC and then an EKS cluster.  Karpenter and its dependencies are then installed next. Karpenter CRDs are installed separately. After Karpenter is installed, we create a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) for the x86 and graviton cluster node pools. We then apply taints on the node pools. To select which pods can be scheduled on the either node pool, we apply tolerations on those pods to match the keys on the node taints. 
 
 ## Contents
 
@@ -30,7 +30,7 @@ The terraform code located in path `code/`:
 - Assigns the required tags required by EKS and Karpenter for services to
 - Installs  resources required by Karpenter and an SQS queue as explained [here](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter).
 - Installs Karpenter using terraform helm provider
-- Creates a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) 
+- Creates a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/). 
 
 The folder `code/k8s-test-manifests` contains test kubernetes manifests for launching test pods on either x86 and graviton based instances.
 
