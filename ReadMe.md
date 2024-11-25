@@ -39,14 +39,14 @@ The folder `/k8s` contains test kubernetes manifests for launching test pods on 
 
 2. Create an IAM user for terraform. For ease of demonstration, give the user Administrator rights. Then, create security credentials for the user (Access Key and Secret Key). When you go to live, remember to grant only permissions required.
 
-3. Create an S3 bucket for storing state in the desired AWS region.
+3. Create an S3 bucket and a DynamoDB table for storing state in the desired AWS region. [See](https://developer.hashicorp.com/terraform/language/backend/s3) if you intend to use remote state for your Terraform infra.
 
 4. Setup your AWS CLI. 
 ```
 aws configure sso
 ```
 
-5. Modify backend.tf file
+5. Uncomment and modify backend.tf file with the details from step 3 if you will be using remote state.
 
 6. Run 
 
@@ -95,4 +95,4 @@ kubectl get node -o wide
 1. The subnets need to have correct tags for EKS otherwise coredns won't start.
 2. When using Fargate, pods need to be scheduled in private subnets that do not have a direct route to an internet gateway. So, you need a NAT gateway which introduces additional costs.
 3. By default, CRDs are installed during intial helm chart installation however not updated when Karpenter versions are upgraded. Hence the solution introduced for CRDs.
-4. The karpenter module requires additional parameters (lines 7-11) for the Karpernter pods to correctly come up using PodIdentity. Without these, you will experience permissions related errors when the pods are coming up. This info is not available in the existing docs nor articles available for v1 Karpenter
+4. The karpenter module requires additional parameters (lines 7-11) for the Karpernter pods to correctly come up using PodIdentity. Without these, you will experience permissions related errors when the pods are coming up. This info is not available in the existing docs nor articles available for v1 Karpenter.
