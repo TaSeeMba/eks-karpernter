@@ -1,8 +1,8 @@
-cluster_name    = "eks2511"
+cluster_name    = "eksdemo"
 cluster_version = "1.31"
 region          = "eu-west-1"
 
-create_vpc = true
+# create_vpc = true
 
 karpenter_version = "1.0.8"
 

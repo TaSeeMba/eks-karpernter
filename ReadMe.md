@@ -14,24 +14,25 @@ They have asked you if you can help create the following:
 
 # Solution Overview
 
-The solution used is based on running the Karpenter controller on AWS Fargate. The reasons are: its faster to spin up (versus EC2 managed node groups), automatic scaling and simplified management. 
+The solution presented in this repo runs the Karpenter controller on AWS Fargate. This decision is due to various reasons such as: its faster to spin up (versus EC2 managed node groups), automatic scaling and simplified management. 
 
-To simplify the whole process (see gotchas section), I have created a vpc with the solution - however, the solution can be easily parameterised to deploy into an existing vpc by using terraform input variables. 
+To simplify the deployment and testing process (see #Gotchas section), I have created a vpc with the solution. However, the solution can be easily customised to deploy into an existing vpc by using the commented out terraform input variables. 
 
-Once the cluster is provisioned, Karpenter and its dependencies are installed. We install Karpenter CRDs separately. After Karpenter is installed, we create a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) for the x86 and graviton nodes. We use taints to mark the two node types. To select which pods can be scheduled on the either type of nodes, we apply tolerations on those pods to match the keys on the node taints. 
+This solution first provisions a VPC and then an EKS cluster.  Karpenter and its dependencies are then installed next. Karpenter CRDs are installed separately. After Karpenter is installed, we create a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) for the x86 and graviton cluster nodepools. We then apply taints on the nodepools. To select which pods can be scheduled on the either nodepool, we apply tolerations on those pods to match the keys on the node taints. 
 
 ## Contents
 
-This repo contains terraform code and k8s manifests file. For ease of demonstration, this code creates a vpc however if there is an existing vpc, see instructions at the bottom of the page.
+This repo contains terraform code and k8s manifests file used to test the implementation. For ease of demonstration, this code creates a vpc however if there is an existing vpc, see instructions at the bottom of the page.
 
-The terraform code does the following:
+The terraform code located in path `code/`:
 - Creates a VPC
 - Creates an EKS cluster
 - Assigns the required tags required by EKS and Karpenter for services to
-- Installs IAM required by Karpenter and an SQS queue . [See](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter)
+- Installs  resources required by Karpenter and an SQS queue as explained [here](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter).
 - Installs Karpenter using terraform helm provider
+- Creates a [NodeClass](https://karpenter.sh/v1.0/concepts/nodeclasses/) and [NodePools](https://karpenter.sh/v1.0/concepts/nodepools/) 
 
-The folder `/k8s` contains test kubernetes manifests for launching test pods on either x86 and graviton based instances.
+The folder `code/k8s-test-manifests` contains test kubernetes manifests for launching test pods on either x86 and graviton based instances.
 
 ## Getting Started
 
@@ -46,9 +47,11 @@ The folder `/k8s` contains test kubernetes manifests for launching test pods on 
 aws configure sso
 ```
 
-5. Uncomment and modify backend.tf file with the details from step 3 if you will be using remote state.
+5. Uncomment and modify `backend.tf` file with the details from step 3 if you will be using remote state.
 
-6. Run 
+6. Modify `code/terraform.tfvars` to customise your installation.
+
+6. Run terraform from `code/`:
 
 ```
 terraform init --reconfigure
@@ -58,7 +61,7 @@ terraform plan
 terraform apply
 ```
 
-7. After terraform has successfully run, configure your kube context
+7. After terraform has successfully run, configure your local kube-context.
 ```
 aws eks update-kubeconfig --region REGION --name CLUSTER_NAME
 ```
@@ -73,19 +76,23 @@ kubectl get po -n kube-system
 kubectl get po -n karpenter
 kubectl logs -n karpenter POD_NAME -f
 
-# check whether the NodeClass and NodePool resources are successfully created and in a ready state
+# check whether the NodeClass and NodePool resources are successfully created and in a Ready state
 kubectl get ec2nodeclass
 kubectl get nodepool
 
 ```
 
-9. Change directory into `/k8s` folder and install the test deployments. Then, check the nodes to pick the architecture of the nodes the deployments are spun.
+9. Change directory into `code/k8s-test-manifests` folder and deploy into the cluster the test deployments. Then, check the nodes to pick the architecture of the nodes the deployments are spun.
 ```
-cd k8s/
+# from root folder of project
+cd code/k8s-test-manifests/
+
 # install the test manifests
 kubectl apply -f .
+
 # verify that the pods get into a running state
 kubectl get po
+
 # After pods are running, you can use the info from KERNEL-VERSION to check type of node (arm64 or amd64) the pods are running from
 kubectl get node -o wide
 ```
@@ -95,4 +102,4 @@ kubectl get node -o wide
 1. The subnets need to have correct tags for EKS otherwise coredns won't start.
 2. When using Fargate, pods need to be scheduled in private subnets that do not have a direct route to an internet gateway. So, you need a NAT gateway which introduces additional costs.
 3. By default, CRDs are installed during intial helm chart installation however not updated when Karpenter versions are upgraded. Hence the solution introduced for CRDs.
-4. The karpenter module requires additional parameters (lines 7-11) for the Karpernter pods to correctly come up using PodIdentity. Without these, you will experience permissions related errors when the pods are coming up. This info is not available in the existing docs nor articles available for v1 Karpenter.
+4. The karpenter module requires additional parameters (lines 7-11) for the Karpernter pods to correctly come up using PodIdentity. Without these, you will experience permissions related errors when the pods are coming up. This info is not available in the existing docs nor articles currently available for v1 Karpenter documentation and examples provided by AWS.
