@@ -6,10 +6,9 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  # add cluster creator to admins to be able to administer cluster view AWS console and CLI
+  cluster_endpoint_public_access  = true
   enable_cluster_creator_admin_permissions = true
 
-  # this setting is required to allow Karpenter pods to startup using PodIdentity auth
   enable_irsa = true
 
   cluster_addons = {

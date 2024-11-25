@@ -1,63 +1,52 @@
 
 variable "cluster_name" {
-  description = "The name of the EKS cluster"
+  description = "The name of the EKS cluster."
   type        = string
 }
 
 variable "cluster_version" {
   description = "Kubernetes <major>.<minor> version to use for the EKS cluster (i.e.: 1.21)"
   type = string
-  default = "1.28"
+  default = "1.31"
 }
 
-variable "kubernetes_access_role" {
-  description = "Role for accessing kubernetes"
-  type = string
+variable "create_vpc" {
+  description = "Flag to determine whether to create a VPC using the provided class. If set to false, manually provide vpc_id and subnet_ids."
+  type        = string
+  default = true
+}
+
+
+variable "vpc_id" {
+  description = "ID of the VPC where the cluster security group will be provisioned."
+  type        = string
   default = ""
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC where the cluster security group will be provisioned"
-  type        = string
-}
-variable "subnets_ids" {
-  description = "A list of subnet IDs where the nodes/node groups will be provisioned"
+variable "private_subnets_ids" {
+  description = "A list of private subnet IDs."
   type        = list(string)
+  default = []
 }
 
 variable "public_subnets_ids" {
-  description = "A list of subnet IDs where the nodes/node groups will be provisioned"
+  description = "A list of public subnet IDs."
   type        = list(string)
+  default = []
 }
-
-
-variable "node_instance_types" {
-  description = "List of instance types for the node pool"
-  type        = list(string)
-  default     = ["m5.large", "c6g.large"]  # Example instance types (x86 and arm64)
-}
-
-variable "aws_auth_roles" {
-  description = "List of role maps to add to the aws-auth configmap"
-  type        = list(any)
-  default     = []
-}
-variable "aws_auth_users" {
-  description = "List of user maps to add to the aws-auth configmap"
-  type        = list(any)
-  default     = []
-}
-
 
 variable "tags" {
-  description = "A map of tags to add to all resources"
+  description = "A map of tags to add to all resources."
   type        = map(string)
+  default = {}
 }
 
 variable "karpenter_version" {
-  default = "v0.31.0"
+  description = "Version of Karpenter."
+  default = "1.0.8"
 }
 
 variable "region" {
+  description = "Name of AWS region resources will be created in."
   default = "af-south-1"
 }
