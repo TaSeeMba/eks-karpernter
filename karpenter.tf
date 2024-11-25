@@ -4,8 +4,8 @@ module "karpenter" {
 
   cluster_name = module.eks.cluster_name
 
-  create = true
-  enable_irsa = true
+  create                  = true
+  enable_irsa             = true
   create_instance_profile = true
 
   irsa_oidc_provider_arn = module.eks.oidc_provider_arn
@@ -16,6 +16,10 @@ module "karpenter" {
   }
 
   tags = var.tags
+
+  depends_on = [
+    module.eks
+  ]
 }
 
 # provider "aws" {
@@ -27,16 +31,33 @@ module "karpenter" {
 #   provider = aws.virginia
 # }
 
+data "helm_template" "karpenter" {
+  repository = "oci://public.ecr.aws/karpenter"
+  chart      = "karpenter"
+  version    = var.karpenter_version
+  name       = "karpenter"
+}
+
+resource "kubectl_manifest" "karpenter_crds" {
+  for_each = {
+    for crd in data.helm_template.karpenter.crds :
+    yamldecode(crd).metadata.name => crd
+  }
+  yaml_body  = each.value
+  apply_only = true
+}
+
 
 resource "helm_release" "karpenter" {
-  namespace           = "karpenter"
-  name                = "karpenter"
-  repository          = "oci://public.ecr.aws/karpenter"
+  namespace  = "karpenter"
+  name       = "karpenter"
+  repository = "oci://public.ecr.aws/karpenter"
   # repository_username = data.aws_ecrpublic_authorization_token.token.user_name
   # repository_password = data.aws_ecrpublic_authorization_token.token.password
-  chart               = "karpenter"
-  version             = var.karpenter_version
-  create_namespace    = true
+  chart            = "karpenter"
+  version          = var.karpenter_version
+  create_namespace = true
+  skip_crds        = true
 
   set {
     name  = "controller.env[0].name"
@@ -76,7 +97,7 @@ resource "helm_release" "karpenter" {
 
 #Create a NodeClass resource. For ease of demonstration, it uses the latest Amazon Linux 2 AMI
 resource "kubectl_manifest" "karpenter_nodeclass" {
-  wait = true 
+  wait      = true
   yaml_body = <<-YAML
     apiVersion: karpenter.k8s.aws/v1
     kind: EC2NodeClass
@@ -102,7 +123,7 @@ resource "kubectl_manifest" "karpenter_nodeclass" {
 
 # Create Nodepool for x86 architecture nodes
 resource "kubectl_manifest" "karpenter_nodepool_x86" {
-  wait = true # We need to wait for destruction and finalizer
+  wait      = true # We need to wait for destruction and finalizer
   yaml_body = <<-YAML
     apiVersion: karpenter.sh/v1
     kind: NodePool
@@ -149,7 +170,7 @@ resource "kubectl_manifest" "karpenter_nodepool_x86" {
 
 # Create Nodepool for gravition architecture nodes
 resource "kubectl_manifest" "karpenter_nodepool_graviton" {
-  wait = true
+  wait      = true
   yaml_body = <<-YAML
     apiVersion: karpenter.sh/v1
     kind: NodePool

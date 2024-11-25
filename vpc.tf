@@ -1,137 +1,33 @@
-resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 5.0"
 
-  # Must be enabled for EFS
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+  #   count = var.create_vpc == true ? 1 : 0
 
-  tags = {
-    Name = "main"
+  name = local.vpc_name
+  cidr = local.vpc_cidr
+
+  azs             = local.azs
+  private_subnets = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 4, k)]
+  public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
+  intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
+
+  enable_nat_gateway = true
+  single_nat_gateway = true
+
+  public_subnet_tags = {
+    "kubernetes.io/role/elb" = 1
   }
-}
 
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "igw"
-  }
-}
-
-resource "aws_subnet" "private-eu-west-1a" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.0.0/19"
-  availability_zone = "eu-west-1a"
-
-  tags = {
-    "Name"                                      = "private-eu-west-1a"
-    "kubernetes.io/role/internal-elb"           = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
+  private_subnet_tags = {
+    "kubernetes.io/role/internal-elb"           = 1,
+    "kubernetes.io/cluster/${var.cluster_name}" = "owned",
+    # Tags subnets for Karpenter auto-discovery
     "karpenter.sh/discovery" = var.cluster_name
   }
+
+  tags = merge(
+    { Name = local.vpc_name },
+    var.tags
+  )
 }
-
-resource "aws_subnet" "private-eu-west-1b" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.32.0/19"
-  availability_zone = "eu-west-1b"
-
-  tags = {
-    "Name"                                      = "private-eu-west-1b"
-    "kubernetes.io/role/internal-elb"           = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
-    "karpenter.sh/discovery" = var.cluster_name
-  }
-}
-
-resource "aws_subnet" "public-eu-west-1a" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.64.0/19"
-  availability_zone       = "eu-west-1a"
-  map_public_ip_on_launch = true
-
-  tags = {
-    "Name"                                      = "public-eu-west-1a"
-    "kubernetes.io/role/elb"                    = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
-  }
-}
-
-resource "aws_subnet" "public-eu-west-1b" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.96.0/19"
-  availability_zone       = "eu-west-1b"
-  map_public_ip_on_launch = true
-
-  tags = {
-    "Name"                                      = "public-eu-west-1b"
-    "kubernetes.io/role/elb"                    = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "owned"
-  }
-}
-
-resource "aws_eip" "nat" {
-  domain = "vpc"
-
-  tags = {
-    Name = "nat"
-  }
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public-eu-west-1a.id
-
-  tags = {
-    Name = "nat"
-  }
-
-  depends_on = [aws_internet_gateway.igw]
-}
-
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
-
-  tags = {
-    Name = "private"
-  }
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-
-  tags = {
-    Name = "public"
-  }
-}
-
-resource "aws_route_table_association" "private-eu-west-1a" {
-  subnet_id      = aws_subnet.private-eu-west-1a.id
-  route_table_id = aws_route_table.private.id
-}
-
-resource "aws_route_table_association" "private-eu-west-1b" {
-  subnet_id      = aws_subnet.private-eu-west-1b.id
-  route_table_id = aws_route_table.private.id
-}
-
-resource "aws_route_table_association" "public-eu-west-1a" {
-  subnet_id      = aws_subnet.public-eu-west-1a.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "public-eu-west-1b" {
-  subnet_id      = aws_subnet.public-eu-west-1b.id
-  route_table_id = aws_route_table.public.id
-}
-

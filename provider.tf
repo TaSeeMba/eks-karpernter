@@ -1,18 +1,18 @@
 terraform {
- required_providers {
-   aws = {
-     source  = "hashicorp/aws"
-     version = "~> 5.75.0"
-   }
-   kubernetes = {
-    source  = "hashicorp/kubernetes"
-    version = "~> 2.33.0"
-   }
-   kubectl = {
-    source  = "alekc/kubectl"
-    version = "~> 2.1"
-   }
-   helm = {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.75.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.33.0"
+    }
+    kubectl = {
+      source  = "alekc/kubectl"
+      version = "~> 2.1"
+    }
+    helm = {
       source  = "hashicorp/helm"
       version = ">= 2.4.1"
     }
@@ -42,7 +42,7 @@ provider "kubectl" {
     # This requires the awscli to be installed locally where Terraform is executed
     args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     env = {
-      AWS_REGION  = var.region
+      AWS_REGION = var.region
     }
   }
 }
@@ -58,7 +58,7 @@ provider "kubernetes" {
     # This requires the awscli to be installed locally where Terraform is executed
     args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     env = {
-      AWS_REGION  = var.region
+      AWS_REGION = var.region
     }
   }
 }
@@ -75,7 +75,7 @@ provider "helm" {
       # This requires the awscli to be installed locally where Terraform is executed
       args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
       env = {
-        AWS_REGION  = var.region
+        AWS_REGION = var.region
       }
     }
   }

@@ -6,7 +6,7 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  cluster_endpoint_public_access  = true
+  cluster_endpoint_public_access           = true
   enable_cluster_creator_admin_permissions = true
 
   enable_irsa = true
@@ -44,11 +44,11 @@ module "eks" {
         # @FIXME need to use container image from our ECR but there is no config option for it here
       })
     }
-    kube-proxy             = {}
+    kube-proxy = {}
     eks-pod-identity-agent = {
       most_recent = true
     }
-    vpc-cni                = {
+    vpc-cni = {
       configuration_values = jsonencode({
         env = {
           # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
@@ -59,20 +59,18 @@ module "eks" {
     }
   }
 
-  vpc_id                   = aws_vpc.main.id
-  subnet_ids               = [ aws_subnet.private-eu-west-1a.id,
-      aws_subnet.private-eu-west-1b.id,
-      aws_subnet.public-eu-west-1a.id,
-      aws_subnet.public-eu-west-1b.id
-  ]
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnets
+  control_plane_subnet_ids = module.vpc.intra_subnets
 
   fargate_profiles = {
     karpenter = {
       selectors = [
-        { namespace = "karpenter" 
+        { namespace = "karpenter"
         }
       ]
-      subnet_ids = [aws_subnet.private-eu-west-1a.id, aws_subnet.private-eu-west-1b.id]
+      # subnet_ids = local.private_subnets_ids
+      subnet_ids = module.vpc.private_subnets
     }
     coredns = {
       selectors = [
@@ -82,7 +80,7 @@ module "eks" {
           }
         }
       ]
-      subnet_ids = [aws_subnet.private-eu-west-1a.id, aws_subnet.private-eu-west-1b.id]
+      subnet_ids = module.vpc.private_subnets
     }
   }
 
@@ -92,7 +90,11 @@ module "eks" {
   }
 
   tags = merge(
-    { Name = var.cluster_name},
+    { Name = var.cluster_name },
     var.tags
   )
+
+  depends_on = [
+    module.vpc
+  ]
 }
